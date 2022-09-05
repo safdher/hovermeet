@@ -32,6 +32,9 @@ switch($name){
     case "get_all_classes":
         get_all_classes($conn,$param);
         break;
+    case "get_all_classes_teacher":
+        get_all_classes_teacher($conn,$param);
+        break;
     case "student_enrollment":
         student_enrollment($conn,$param);
         break;
@@ -42,6 +45,29 @@ switch($name){
                 "message" => "Function Not Found"
             ));
         break;
+}
+
+function get_all_classes_teacher($conn,$param){
+
+    $sql = "SELECT * FROM liveclass Where tId = ".$param->tId;
+
+    if(isset($param->search)){
+        $sql .= " and LOWER(title) LIKE LOWER('%".$param->search."%')";
+    }
+
+    $res = [];
+    $result = $conn->query($sql);
+    if($result->num_rows>0){
+        while(  $row = $result->fetch_assoc()){
+            array_push($res,$row);
+        }
+    }
+
+    $json_data=json_encode(array(
+        "status" => "200",
+        "data" => $res
+    ));      
+    echo $json_data;
 }
 
 function student_enrollment($conn,$param){
