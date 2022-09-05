@@ -32,6 +32,9 @@ switch($name){
     case "get_all_classes":
         get_all_classes($conn,$param);
         break;
+    case "student_enrollment":
+        student_enrollment($conn,$param);
+        break;
     default:
         echo json_encode(
             array(
@@ -41,24 +44,73 @@ switch($name){
         break;
 }
 
+function student_enrollment($conn,$param){
+
+    $sql = "INSERT INTO enrollment(cId,uId)
+    VALUES (".$param->cId.",".$param->uId.")";
+    
+    $isInserted = FALSE;
+    try{
+        $isInserted = $conn->query($sql);
+        if ($isInserted === TRUE) {
+            $last = $conn->insert_id;
+            echo json_encode(
+            array(
+                "status" => "200",
+                "message" => "Inserted"
+            ));
+        } else {
+            echo json_encode(
+                array(
+                    "status" => "400",
+                    "data" => "Error"
+                ));
+        }
+    }catch(Exception $e){
+        echo json_encode(
+            array(
+                "status" => "400",
+                "data" => "Already exist"
+            ));
+    }
+}
+
 function get_all_classes($conn,$param){
 
     $sql = "SELECT * FROM liveclass";
 
-    if($param->search != NULL){
+    if(isset($param->search)){
         $sql .= " Where LOWER(title) LIKE LOWER('%".$param->search."%')";
     }
 
     $res = [];
+    $res2 = [];
     $result = $conn->query($sql);
     if($result->num_rows>0){
         while(  $row = $result->fetch_assoc()){
             array_push($res,$row);
         }
     }
+
+    if($param->uId != NULL){
+        $sql = "SELECT l.* FROM liveclass as l join enrollment as e on l.liveId = e.cId where e.uId = $param->uId";
+        
+        if(isset($param->search_enroll)){
+            $sql .= " and LOWER(l.title) LIKE LOWER('%".$param->search_enroll."%')";
+        }
+
+        $result = $conn->query($sql);
+        if($result->num_rows>0){
+            while(  $row = $result->fetch_assoc()){
+                array_push($res2,$row);
+            }
+        }
+    }
+
     $json_data=json_encode(array(
         "status" => "200",
-        "data" => $res
+        "data" => $res,
+        "eroll_data" => $res2
     ));      
     echo $json_data;
 }
