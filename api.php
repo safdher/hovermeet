@@ -38,6 +38,9 @@ switch($name){
     case "student_enrollment":
         student_enrollment($conn,$param);
         break;
+    case "image_upload":
+        image_upload($conn,$param);
+        break;
     default:
         echo json_encode(
             array(
@@ -45,6 +48,22 @@ switch($name){
                 "message" => "Function Not Found"
             ));
         break;
+}
+
+function image_upload($conn,$param){
+    $base64string = $param->image;
+    $uploadpath   = 'uploads/';
+    $parts        = explode(";base64,", $base64string);
+    $imageparts   = explode("image/", @$parts[0]);
+    $imagetype    = $imageparts[1];
+    $imagebase64  = base64_decode($parts[1]);
+    $file         = $uploadpath . uniqid() . '.png';
+    file_put_contents($file, $imagebase64);
+    echo json_encode(
+        array(
+            "status" => "200",
+            "message" => $file
+        ));
 }
 
 function get_all_classes_teacher($conn,$param){
