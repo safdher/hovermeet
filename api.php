@@ -1,6 +1,8 @@
 <?php
 
 require_once("base.php");
+include("class.php");
+
 $input = json_decode(file_get_contents("php://input"));
 $apiKey = "12341234";
 
@@ -244,13 +246,28 @@ function login_user($conn,$param){
 }
 
 function register_user($conn,$param){
-    $sql = "INSERT INTO user(name,emailId,phone,password,userType)
-    VALUES ('".$param->name."','".$param->email."','".$param->phone."','".md5($param->password)."',".$param->usertype.")";
+
+    $otp = rand(100000,999999);
+
+    $sql = "INSERT INTO user(name,emailId,phone,password,userType,otp)
+    VALUES ('".$param->name."','".$param->email."','".$param->phone."','".md5($param->password)."',".$param->usertype.",'".$otp."')";
     $isInserted = FALSE;
 
     try{
         $isInserted = $conn->query($sql);
         if ($isInserted === TRUE) {
+
+            $call = new XMLHttpRequest;
+            $call->open("POST", "https://hoverminds.com/SendMail/api.php?request=sendHoverMail");
+            $call->setRequestHeader("Content-Type","application/json");
+            $call->send('{"apiKey" : 11111,
+                "email": "'.$param->email.'",
+                "your_name" : "Hoverminds",
+                "subject": "OTP Varification",
+                "name" : "'.$param->name.'",
+                "body" : "Please Verify your OTP '.$otp.'"
+            }');
+
             echo json_encode(
             array(
                 "status" => "200",
