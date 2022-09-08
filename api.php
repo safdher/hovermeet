@@ -25,6 +25,9 @@ switch($name){
     case "register_user":
         register_user($conn,$param);
         break;
+    case "otp_verify":
+        otp_verify($conn,$param);
+        break;
     case "add_catagory":
         add_catagory($conn,$param);
         break;
@@ -233,6 +236,34 @@ function login_user($conn,$param){
                 $res['status']=200;
                 $res['message']="Login Successfully";
                 $res['userInfo']=$row;
+            }
+        }
+    }
+    else
+    {
+        $res['status']=400;
+        $res['message']="Invalid Login Details";
+    }
+    $json_data=json_encode($res);      
+    echo $json_data;
+}
+
+function otp_verify($conn,$param){
+    $email=$param->email;
+    $otp=$param->otp;
+    $res=[];
+    $sql = "SELECT * FROM user WHERE emailId='".$email."'";
+    $result = $conn->query($sql);
+    if($result->num_rows>0){
+        while(  $row = $result->fetch_assoc()){
+            if($row["otp"]===$otp){
+                $res['status']=200;
+                $res['message']="OTP verified";
+                $res['userInfo']=$row;
+                break;
+            }else{
+                $res['status']=400;
+                $res['message']="invalid OTP";
             }
         }
     }
