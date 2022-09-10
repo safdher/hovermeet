@@ -28,6 +28,12 @@ switch($name){
     case "otp_verify":
         otp_verify($conn,$param);
         break;
+    case "forgot_password":
+        forgot_password($conn,$param);
+        break;
+    case "otp_verify_password":
+        otp_verify_password($conn,$param);
+        break;
     case "add_catagory":
         add_catagory($conn,$param);
         break;
@@ -36,6 +42,9 @@ switch($name){
         break;
     case "get_all_classes":
         get_all_classes($conn,$param);
+        break;
+    case "teacher_update":
+        teacher_update($conn,$param);
         break;
     case "get_all_classes_teacher":
         get_all_classes_teacher($conn,$param);
@@ -53,6 +62,132 @@ switch($name){
                 "message" => "Function Not Found"
             ));
         break;
+}
+
+function otp_verify_password($conn,$param){
+    $sql = "UPDATE user SET password = md5('".$param->password."') WHERE emailId='".$param->email."' and otp = '".$param->otp."'";
+    $isInserted = FALSE;
+
+    try{
+        $isInserted = $conn->query($sql);
+        if ($isInserted === TRUE && $conn->affected_rows != 0) {
+            echo json_encode(
+            array(
+                "status" => "200",
+                "message" => "OTP updated"
+            ));
+        } else {
+            echo json_encode(
+                array(
+                    "status" => "400",
+                    "data" => "Error"
+                ));
+        }
+    }catch(Exception $e){
+        echo json_encode(
+            array(
+                "status" => "400",
+                "data" => "Already exist"
+            ));
+    }
+}
+
+function forgot_password($conn,$param){
+
+    $otp = rand(100000,999999);
+    $sql = "UPDATE user SET otp = '".$otp."' WHERE emailId='".$param->email."'";
+
+    $isInserted = FALSE;
+
+    try{
+        $isInserted = $conn->query($sql);
+        if ($isInserted === TRUE && $conn->affected_rows != 0) {
+            $call = new XMLHttpRequest;
+            $call->open("POST", "https://hoverminds.com/SendMail/api.php?request=sendHoverMail");
+            $call->setRequestHeader("Content-Type","application/json");
+            $call->send('{"apiKey" : 11111,
+                "email": "'.$param->email.'",
+                "your_name" : "Hoverminds",
+                "subject": "OTP Varification",
+                "body" : "Please Verify your OTP '.$otp.'"
+            }');
+            echo json_encode(
+            array(
+                "status" => "200",
+                "message" => "OTP updated"
+            ));
+        } else {
+            echo json_encode(
+                array(
+                    "status" => "400",
+                    "data" => "Error"
+                ));
+        }
+    }catch(Exception $e){
+        echo json_encode(
+            array(
+                "status" => "400",
+                "data" => "Already exist"
+            ));
+    }
+}
+
+function teacher_update($conn,$param){
+
+    if(!isset($param->isUpdate)){
+        $sql = "INSERT INTO teacher(tId,about,photo)
+        VALUES (".$param->tId.",'".$param->about."','".$param->photo."')";
+        
+        $isInserted = FALSE;
+        try{
+            $isInserted = $conn->query($sql);
+            if ($isInserted === TRUE) {
+                echo json_encode(
+                array(
+                    "status" => "200",
+                    "message" => "Inserted"
+                ));
+            } else {
+                echo json_encode(
+                    array(
+                        "status" => "400",
+                        "data" => "Error"
+                    ));
+            }
+        }catch(Exception $e){
+            echo json_encode(
+                array(
+                    "status" => "400",
+                    "data" => "Already exist"
+                ));
+        }
+    }else{
+        $sql = "UPDATE teacher SET about = '".$param->about."', photo = '".$param->photo."' WHERE tId = ".$param->tId.";";
+        
+        $isInserted = FALSE;
+        try{
+            $isInserted = $conn->query($sql);
+            if ($isInserted === TRUE) {
+                echo json_encode(
+                array(
+                    "status" => "200",
+                    "message" => "Updated"
+                ));
+            } else {
+                echo json_encode(
+                    array(
+                        "status" => "400",
+                        "data" => "Error"
+                    ));
+            }
+        }catch(Exception $e){
+            echo json_encode(
+                array(
+                    "status" => "400",
+                    "data" => "Already exist"
+                ));
+        }
+    }
 }
 
 function image_upload($conn,$param){
@@ -232,7 +367,7 @@ function login_user($conn,$param){
     $result = $conn->query($sql);
     if($result->num_rows>0){
         while(  $row = $result->fetch_assoc()){
-            if($row["emailId"]===$email && $row["password"]===md5($pass)){
+            if($row["emailId"]===$email && $row["password"]===md5($pass) && $row["verified"]===1){
                 $res['status']=200;
                 $res['message']="Login Successfully";
                 $res['userInfo']=$row;
@@ -257,6 +392,8 @@ function otp_verify($conn,$param){
     if($result->num_rows>0){
         while(  $row = $result->fetch_assoc()){
             if($row["otp"]===$otp){
+                $sql = "UPDATE user SET verified = 1 WHERE emailId='".$email."'";
+                $conn->query($sql);
                 $res['status']=200;
                 $res['message']="OTP verified";
                 $res['userInfo']=$row;
@@ -279,44 +416,73 @@ function otp_verify($conn,$param){
 function register_user($conn,$param){
 
     $otp = rand(100000,999999);
+    if(!isset($param->isUpdate)){
+        $sql = "INSERT INTO user(name,emailId,phone,password,userType,otp)
+        VALUES ('".$param->name."','".$param->email."','".$param->phone."','".md5($param->password)."',".$param->usertype.",'".$otp."')";
+        $isInserted = FALSE;
 
-    $sql = "INSERT INTO user(name,emailId,phone,password,userType,otp)
-    VALUES ('".$param->name."','".$param->email."','".$param->phone."','".md5($param->password)."',".$param->usertype.",'".$otp."')";
-    $isInserted = FALSE;
+        try{
+            $isInserted = $conn->query($sql);
+            if ($isInserted === TRUE) {
 
-    try{
-        $isInserted = $conn->query($sql);
-        if ($isInserted === TRUE) {
+                $call = new XMLHttpRequest;
+                $call->open("POST", "https://hoverminds.com/SendMail/api.php?request=sendHoverMail");
+                $call->setRequestHeader("Content-Type","application/json");
+                $call->send('{"apiKey" : 11111,
+                    "email": "'.$param->email.'",
+                    "your_name" : "Hoverminds",
+                    "subject": "OTP Varification",
+                    "name" : "'.$param->name.'",
+                    "body" : "Please Verify your OTP '.$otp.'"
+                }');
 
-            $call = new XMLHttpRequest;
-            $call->open("POST", "https://hoverminds.com/SendMail/api.php?request=sendHoverMail");
-            $call->setRequestHeader("Content-Type","application/json");
-            $call->send('{"apiKey" : 11111,
-                "email": "'.$param->email.'",
-                "your_name" : "Hoverminds",
-                "subject": "OTP Varification",
-                "name" : "'.$param->name.'",
-                "body" : "Please Verify your OTP '.$otp.'"
-            }');
-
-            echo json_encode(
-            array(
-                "status" => "200",
-                "message" => "Inserted"
-            ));
-        } else {
+                echo json_encode(
+                array(
+                    "status" => "200",
+                    "message" => "Inserted"
+                ));
+            } else {
+                echo json_encode(
+                    array(
+                        "status" => "400",
+                        "data" => "Error"
+                    ));
+            }
+        }catch(Exception $e){
             echo json_encode(
                 array(
                     "status" => "400",
-                    "data" => "Error"
+                    "data" => "Already exist"
                 ));
         }
-    }catch(Exception $e){
-        echo json_encode(
-            array(
-                "status" => "400",
-                "data" => "Already exist"
-            ));
+    }else{
+        $sql = "UPDATE user SET phone = '".$param->phone."' WHERE uId=".$param->uId;
+
+        $isInserted = FALSE;
+
+        try{
+            $isInserted = $conn->query($sql);
+            if ($isInserted === TRUE) {
+
+                echo json_encode(
+                array(
+                    "status" => "200",
+                    "message" => "Updated"
+                ));
+            } else {
+                echo json_encode(
+                    array(
+                        "status" => "400",
+                        "data" => "Error"
+                    ));
+            }
+        }catch(Exception $e){
+            echo json_encode(
+                array(
+                    "status" => "400",
+                    "data" => "Already exist"
+                ));
+        }
     }
 }
 
